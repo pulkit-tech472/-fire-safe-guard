@@ -1,0 +1,2028 @@
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
+  />
+  <meta name="theme-color" content="#dc2626" />
+  <title>Smart Fire Guard</title>
+
+  <!-- Tailwind CSS via CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <style>
+    html,
+    body {
+      margin: 0;
+      min-height: 100%;
+      font-family:
+        Inter, system-ui, -apple-system, BlinkMacSystemFont,
+        "Segoe UI", sans-serif;
+      background: #f8fafc;
+    }
+
+    .screen {
+      display: none;
+      min-height: 100dvh;
+    }
+
+    .screen.active {
+      display: flex;
+      animation: screenIn 0.4s ease-out;
+    }
+
+    @keyframes screenIn {
+      from {
+        opacity: 0;
+        transform: translateX(25px);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateX(0);
+      }
+    }
+
+    .emergency-button {
+      width: min(76vw, 320px);
+      height: min(76vw, 320px);
+      border-radius: 50%;
+      background: linear-gradient(145deg, #ef4444, #b91c1c);
+      box-shadow:
+        0 0 0 12px rgba(239, 68, 68, 0.12),
+        0 0 0 25px rgba(239, 68, 68, 0.06),
+        0 25px 55px rgba(185, 28, 28, 0.35);
+      transition: transform 0.15s ease;
+    }
+
+    .emergency-button:active {
+      transform: scale(0.94);
+    }
+
+    .emergency-pulse {
+      animation: emergencyPulse 2s infinite;
+    }
+
+    @keyframes emergencyPulse {
+      0%,
+      100% {
+        box-shadow:
+          0 0 0 12px rgba(239, 68, 68, 0.12),
+          0 0 0 25px rgba(239, 68, 68, 0.06),
+          0 25px 55px rgba(185, 28, 28, 0.35);
+      }
+
+      50% {
+        box-shadow:
+          0 0 0 20px rgba(239, 68, 68, 0.09),
+          0 0 0 40px rgba(239, 68, 68, 0.025),
+          0 30px 65px rgba(185, 28, 28, 0.45);
+      }
+    }
+
+    .sensor-pulse {
+      animation: sensorPulse 1.2s infinite;
+    }
+
+    @keyframes sensorPulse {
+      0% {
+        box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.45);
+      }
+
+      70% {
+        box-shadow: 0 0 0 14px rgba(34, 197, 94, 0);
+      }
+
+      100% {
+        box-shadow: 0 0 0 0 rgba(34, 197, 94, 0);
+      }
+    }
+
+    .mic-pulse {
+      animation: micPulse 1s infinite;
+    }
+
+    @keyframes micPulse {
+      0% {
+        transform: scale(1);
+        box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.5);
+      }
+
+      70% {
+        transform: scale(1.05);
+        box-shadow: 0 0 0 18px rgba(220, 38, 38, 0);
+      }
+
+      100% {
+        transform: scale(1);
+        box-shadow: 0 0 0 0 rgba(220, 38, 38, 0);
+      }
+    }
+
+    .volume-bar {
+      transition: width 80ms linear;
+    }
+
+    .safe-gradient {
+      background:
+        radial-gradient(circle at top, rgba(254, 226, 226, 0.8), transparent 45%),
+        linear-gradient(to bottom, #fff7f7, #ffffff);
+    }
+  </style>
+</head>
+
+<body>
+
+  <!-- =========================================================
+       SCREEN 1 — HOME & AUTO SOUND SENSOR
+  ========================================================== -->
+  <section
+    id="homeScreen"
+    class="screen active flex-col safe-gradient"
+  >
+    <header class="px-6 pt-10 text-center">
+      <div
+        class="inline-flex items-center gap-2 rounded-full bg-red-100 px-4 py-2 text-sm font-black text-red-700"
+      >
+        <span class="h-2.5 w-2.5 rounded-full bg-red-500"></span>
+        Smart Fire Guard
+      </div>
+
+      <h1 class="mt-5 text-3xl font-black tracking-tight text-slate-950">
+        Fire Safety Assistant
+      </h1>
+
+      <p class="mx-auto mt-2 max-w-sm text-sm leading-relaxed text-slate-500">
+        Manually trigger an emergency or enable the automatic sound sensor.
+      </p>
+    </header>
+
+
+    <main class="flex flex-1 flex-col items-center justify-center px-6 pb-10">
+
+      <!-- Manual emergency trigger -->
+      <button
+        id="emergencyButton"
+        type="button"
+        class="emergency-button emergency-pulse flex flex-col items-center justify-center text-white focus:outline-none focus:ring-4 focus:ring-red-300"
+        aria-label="Emergency Fire"
+      >
+        <span class="text-5xl">🔥</span>
+
+        <span class="mt-3 text-2xl font-black leading-tight">
+          EMERGENCY
+        </span>
+
+        <span class="text-2xl font-black leading-tight">
+          / FIRE
+        </span>
+      </button>
+
+      <p class="mt-8 text-sm font-semibold text-slate-500">
+        Tap to manually activate emergency mode
+      </p>
+
+
+      <!-- =====================================================
+           AUTO SENSOR
+      ====================================================== -->
+      <div class="mt-8 w-full max-w-sm">
+
+        <button
+          id="sensorButton"
+          type="button"
+          class="w-full rounded-2xl border-2 border-green-200 bg-white px-5 py-4 text-sm font-black text-green-700 shadow-sm transition active:scale-95 hover:bg-green-50"
+        >
+          🎙️ Enable Auto-Sensor
+        </button>
+
+        <div
+          id="sensorStatus"
+          class="mt-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm"
+        >
+          <div class="flex items-center gap-3">
+            <span
+              id="sensorStatusDot"
+              class="h-3 w-3 rounded-full bg-slate-300"
+            ></span>
+
+            <div>
+              <p
+                id="sensorStatusTitle"
+                class="text-sm font-black text-slate-700"
+              >
+                Auto-Sensor Disabled
+              </p>
+
+              <p
+                id="sensorStatusText"
+                class="mt-0.5 text-xs leading-relaxed text-slate-400"
+              >
+                Tap the button to allow microphone access and monitor ambient sound.
+              </p>
+            </div>
+          </div>
+
+          <!-- Live volume meter -->
+          <div
+            id="volumeContainer"
+            class="mt-4 hidden"
+          >
+            <div class="mb-1 flex justify-between text-[10px] font-bold uppercase tracking-wider text-slate-400">
+              <span>Ambient sound</span>
+              <span id="volumePercent">0%</span>
+            </div>
+
+            <div class="h-2 overflow-hidden rounded-full bg-slate-100">
+              <div
+                id="volumeBar"
+                class="volume-bar h-full w-0 rounded-full bg-green-500"
+              ></div>
+            </div>
+
+            <p
+              id="alarmDetectionText"
+              class="mt-2 text-center text-[11px] font-semibold text-slate-400"
+            >
+              Monitoring for sustained loud sound...
+            </p>
+          </div>
+        </div>
+
+      </div>
+
+    </main>
+
+
+    <footer class="px-6 pb-8 text-center">
+      <p class="text-[11px] leading-relaxed text-slate-400">
+        Auto-Sensor uses your microphone only while enabled to detect
+        sustained high-volume sound. It does not record or upload audio.
+      </p>
+    </footer>
+  </section>
+
+
+  <!-- =========================================================
+       SCREEN 2 — EMERGENCY / INTERACTIVE VOICE
+  ========================================================== -->
+  <section
+    id="emergencyScreen"
+    class="screen flex-col bg-gradient-to-b from-red-50 via-white to-orange-50"
+  >
+    <header class="px-5 pt-8">
+      <div class="flex items-center justify-between">
+        <span
+          class="rounded-full bg-red-100 px-4 py-2 text-xs font-black tracking-wider text-red-700"
+        >
+          🚨 EMERGENCY MODE
+        </span>
+
+        <button
+          id="stopEmergencyButton"
+          type="button"
+          class="rounded-full bg-white px-4 py-2 text-xs font-bold text-slate-600 shadow-sm"
+        >
+          Stop
+        </button>
+      </div>
+    </header>
+
+
+    <main class="flex flex-1 flex-col items-center overflow-y-auto px-5 pb-10 pt-8">
+
+      <!-- Emergency icon -->
+      <div
+        class="flex h-24 w-24 items-center justify-center rounded-full bg-red-100 text-5xl"
+      >
+        🚨
+      </div>
+
+
+      <p class="mt-6 text-xs font-black uppercase tracking-[0.2em] text-red-600">
+        Smart Fire Guard
+      </p>
+
+      <h2
+        id="emergencyHeading"
+        class="mt-3 text-center text-4xl font-black leading-tight tracking-tight text-slate-950"
+      >
+        FIRE DETECTED
+      </h2>
+
+      <p
+        id="sequenceStatus"
+        class="mt-3 text-center text-sm font-semibold text-slate-500"
+      >
+        Starting emergency voice sequence...
+      </p>
+
+
+      <!-- =====================================================
+           LISTENING PANEL
+      ====================================================== -->
+      <div
+        id="listeningPanel"
+        class="mt-8 hidden w-full max-w-md rounded-3xl border-2 border-red-200 bg-white p-6 text-center shadow-xl"
+      >
+        <div
+          class="mic-pulse mx-auto flex h-24 w-24 items-center justify-center rounded-full bg-red-600 text-5xl text-white"
+        >
+          🎙️
+        </div>
+
+        <h3 class="mt-5 text-2xl font-black text-red-700">
+          Listening...
+        </h3>
+
+        <p class="mt-2 text-sm leading-relaxed text-slate-500">
+          Tell me what you can see around you.
+        </p>
+
+        <div class="mt-5 rounded-2xl bg-slate-50 p-4 text-left">
+          <p class="text-[10px] font-black uppercase tracking-widest text-slate-400">
+            Your response
+          </p>
+
+          <p
+            id="transcript"
+            class="mt-2 min-h-6 text-sm font-bold leading-relaxed text-slate-700"
+          >
+            Listening for your response...
+          </p>
+        </div>
+      </div>
+
+
+      <!-- =====================================================
+           SMART RESPONSE PANEL
+      ====================================================== -->
+      <div
+        id="responsePanel"
+        class="mt-6 hidden w-full max-w-md rounded-3xl border border-green-200 bg-green-50 p-5"
+      >
+        <div class="flex gap-3">
+          <div class="text-3xl">🤖</div>
+
+          <div>
+            <p class="text-xs font-black uppercase tracking-widest text-green-700">
+              Smart Reply
+            </p>
+
+            <p
+              id="smartResponse"
+              class="mt-2 text-sm font-bold leading-relaxed text-green-950"
+            ></p>
+          </div>
+        </div>
+      </div>
+
+
+      <!-- Manual safety reminders -->
+      <div class="mt-8 w-full max-w-md space-y-3">
+
+        <div class="rounded-2xl border border-red-100 bg-white p-4 shadow-sm">
+          <div class="flex gap-3">
+            <span class="text-2xl">⬇️</span>
+
+            <div>
+              <p class="font-black text-slate-900">
+                Stay Low
+              </p>
+
+              <p class="mt-1 text-xs leading-relaxed text-slate-500">
+                Crawl low under smoke and move toward the nearest safe exit.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div class="rounded-2xl border border-orange-100 bg-white p-4 shadow-sm">
+          <div class="flex gap-3">
+            <span class="text-2xl">🚫</span>
+
+            <div>
+              <p class="font-black text-slate-900">
+                Do Not Use the Lift
+              </p>
+
+              <p class="mt-1 text-xs leading-relaxed text-slate-500">
+                Use designated emergency stairs and follow exit signs.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div class="rounded-2xl border border-green-100 bg-white p-4 shadow-sm">
+          <div class="flex gap-3">
+            <span class="text-2xl">🏃</span>
+
+            <div>
+              <p class="font-black text-slate-900">
+                Reach a Safe Area
+              </p>
+
+              <p class="mt-1 text-xs leading-relaxed text-slate-500">
+                Once outside, move away from the building and stay in a safe area.
+              </p>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+
+      <!-- Voice controls -->
+      <div class="mt-6 w-full max-w-md space-y-3">
+
+        <button
+          id="replayButton"
+          type="button"
+          class="w-full rounded-2xl border-2 border-red-200 bg-white px-5 py-4 font-black text-red-700 shadow-sm transition active:scale-95"
+        >
+          🔊 Replay Emergency Voice
+        </button>
+
+        <button
+          id="listenAgainButton"
+          type="button"
+          class="hidden w-full rounded-2xl bg-slate-900 px-5 py-4 font-black text-white transition active:scale-95"
+        >
+          🎙️ Listen Again
+        </button>
+
+      </div>
+
+    </main>
+  </section>
+
+
+  <!-- =========================================================
+       JAVASCRIPT
+  ========================================================== -->
+  <script>
+    "use strict";
+
+    /*
+     * ==========================================================
+     * SMART FIRE GUARD
+     *
+     * Features:
+     * 1. Manual emergency trigger
+     * 2. AudioContext + AnalyserNode auto-sound sensor
+     * 3. Sustained high-volume detection
+     * 4. Web Speech API alarm
+     * 5. SpeechRecognition listening
+     * 6. Keyword-based contextual response
+     * ==========================================================
+     */
+
+
+    /* =========================================================
+       DOM REFERENCES
+    ========================================================== */
+
+    const homeScreen =
+      document.getElementById("homeScreen");
+
+    const emergencyScreen =
+      document.getElementById("emergencyScreen");
+
+    const emergencyButton =
+      document.getElementById("emergencyButton");
+
+    const sensorButton =
+      document.getElementById("sensorButton");
+
+    const sensorStatusDot =
+      document.getElementById("sensorStatusDot");
+
+    const sensorStatusTitle =
+      document.getElementById("sensorStatusTitle");
+
+    const sensorStatusText =
+      document.getElementById("sensorStatusText");
+
+    const volumeContainer =
+      document.getElementById("volumeContainer");
+
+    const volumeBar =
+      document.getElementById("volumeBar");
+
+    const volumePercent =
+      document.getElementById("volumePercent");
+
+    const alarmDetectionText =
+      document.getElementById("alarmDetectionText");
+
+    const sequenceStatus =
+      document.getElementById("sequenceStatus");
+
+    const listeningPanel =
+      document.getElementById("listeningPanel");
+
+    const transcriptElement =
+      document.getElementById("transcript");
+
+    const responsePanel =
+      document.getElementById("responsePanel");
+
+    const smartResponse =
+      document.getElementById("smartResponse");
+
+    const replayButton =
+      document.getElementById("replayButton");
+
+    const listenAgainButton =
+      document.getElementById("listenAgainButton");
+
+    const stopEmergencyButton =
+      document.getElementById("stopEmergencyButton");
+
+
+    /* =========================================================
+       AUDIO SENSOR STATE
+    ========================================================== */
+
+    let audioContext = null;
+    let analyser = null;
+    let microphoneSource = null;
+    let microphoneStream = null;
+    let sensorAnimationFrame = null;
+
+    let sensorEnabled = false;
+
+    /*
+     * Time at which volume first crossed the threshold.
+     */
+    let loudSoundStartTime = null;
+
+    /*
+     * Prevent the same loud sound from repeatedly triggering
+     * the emergency sequence.
+     */
+    let sensorTriggered = false;
+
+
+    /*
+     * IMPORTANT:
+     *
+     * This is an amplitude threshold, not a true fire-alarm
+     * classifier. A loud alarm, clap, music, voice, etc. can
+     * potentially cross it.
+     *
+     * 0.22 works as a practical starting value for a demo.
+     */
+    const LOUD_VOLUME_THRESHOLD = 0.22;
+
+    /*
+     * Sound must remain above the threshold for this long.
+     * Requirement: approximately 1–2 seconds.
+     */
+    const REQUIRED_LOUD_DURATION = 1300;
+
+
+    /* =========================================================
+       SPEECH STATE
+    ========================================================== */
+
+    const speechSupported =
+      "speechSynthesis" in window &&
+      "SpeechSynthesisUtterance" in window;
+
+    let emergencySequenceRunning = false;
+    let recognition = null;
+    let recognitionActive = false;
+    let responseBeingProcessed = false;
+
+
+    /* =========================================================
+       SPEECH TEXT
+    ========================================================== */
+
+    /*
+     * EXACTLY TWO TIMES.
+     *
+     * No additional alarm repetitions are made by the code.
+     */
+    const ALARM_TEXT =
+      "EMERGENCY ALERT! FIRE DETECTED!";
+
+
+    const QUESTION_TEXT =
+      "Kripya ghabraye nahi. Mujhe batayein aapke aas paas kya dikh raha hai? Dhua ya aag?";
+
+
+    const SMOKE_REPLY =
+      "Dhua detected. Zameen par let jayein aur crawl karke left stairs se niklein.";
+
+
+    const FIRE_REPLY =
+      "Aag detected. Aag se door rahein aur emergency exit se niklein.";
+
+
+    /* =========================================================
+       SCREEN TRANSITION
+    ========================================================== */
+
+    function showEmergencyScreen() {
+      homeScreen.classList.remove("active");
+
+      /*
+       * Small delay makes the screen transition feel deliberate.
+       */
+      requestAnimationFrame(() => {
+        emergencyScreen.classList.add("active");
+      });
+    }
+
+
+    function showHomeScreen() {
+      emergencyScreen.classList.remove("active");
+
+      requestAnimationFrame(() => {
+        homeScreen.classList.add("active");
+      });
+    }
+
+
+    /* =========================================================
+       SPEECH SYNTHESIS
+    ========================================================== */
+
+    function getVoice(language) {
+      if (!speechSupported) {
+        return null;
+      }
+
+      const voices =
+        window.speechSynthesis.getVoices();
+
+      /*
+       * Prefer an exact language match.
+       */
+      const exact =
+        voices.find(
+          (voice) =>
+            voice.lang &&
+            voice.lang.toLowerCase() ===
+              language.toLowerCase()
+        );
+
+      if (exact) {
+        return exact;
+      }
+
+      /*
+       * Otherwise prefer same language family.
+       */
+      const family =
+        voices.find(
+          (voice) =>
+            voice.lang &&
+            voice.lang
+              .toLowerCase()
+              .startsWith(
+                language.substring(0, 2).toLowerCase()
+              )
+        );
+
+      return family || null;
+    }
+
+
+    function speak(
+      text,
+      language = "en-IN",
+      rate = 0.75
+    ) {
+      return new Promise((resolve) => {
+        if (!speechSupported) {
+          resolve();
+          return;
+        }
+
+        const utterance =
+          new SpeechSynthesisUtterance(text);
+
+        utterance.lang = language;
+        utterance.rate = rate;
+        utterance.pitch = 1;
+        utterance.volume = 1;
+
+        const voice =
+          getVoice(language);
+
+        if (voice) {
+          utterance.voice = voice;
+        }
+
+        utterance.onend = () => {
+          resolve();
+        };
+
+        utterance.onerror = () => {
+          resolve();
+        };
+
+        window.speechSynthesis.speak(
+          utterance
+        );
+      });
+    }
+
+
+    function stopSpeech() {
+      if (speechSupported) {
+        window.speechSynthesis.cancel();
+      }
+    }
+
+
+    /* =========================================================
+       EMERGENCY SEQUENCE
+    ========================================================== */
+
+    async function startEmergencySequence(
+      trigger = "manual"
+    ) {
+      /*
+       * Prevent multiple simultaneous sequences.
+       */
+      if (emergencySequenceRunning) {
+        return;
+      }
+
+      emergencySequenceRunning = true;
+
+      /*
+       * Stop the audio sensor from immediately retriggering.
+       */
+      sensorTriggered = true;
+
+      /*
+       * Stop any recognition that might still be active.
+       */
+      stopRecognition();
+
+      /*
+       * Stop existing speech before beginning a fresh sequence.
+       */
+      stopSpeech();
+
+      /*
+       * Transition to Screen 2.
+       */
+      showEmergencyScreen();
+
+      /*
+       * Give the UI a moment to render.
+       */
+      await delay(250);
+
+
+      /* -------------------------------------------------------
+         STEP A — ALARM
+         EXACTLY TWO TIMES
+      -------------------------------------------------------- */
+
+      sequenceStatus.textContent =
+        trigger === "auto"
+          ? "⚠️ Loud sound detected — emergency activated"
+          : "Emergency activated";
+
+
+      if (speechSupported) {
+
+        /*
+         * EXACTLY TWO calls to speak(ALARM_TEXT).
+         *
+         * Each call completes before the next starts.
+         */
+        await speak(
+          ALARM_TEXT,
+          "en-IN",
+          0.75
+        );
+
+        await speak(
+          ALARM_TEXT,
+          "en-IN",
+          0.75
+        );
+
+      } else {
+        /*
+         * Graceful fallback if SpeechSynthesis
+         * is unavailable.
+         */
+        sequenceStatus.textContent =
+          "Voice output unavailable. Follow the safety instructions.";
+      }
+
+
+      /* -------------------------------------------------------
+         STEP B — QUESTION
+      -------------------------------------------------------- */
+
+      sequenceStatus.textContent =
+        "Please respond to the emergency assistant...";
+
+
+      if (speechSupported) {
+        await speak(
+          QUESTION_TEXT,
+          "en-IN",
+          0.75
+        );
+      }
+
+
+      /* -------------------------------------------------------
+         STEP C — LISTENING
+      -------------------------------------------------------- */
+
+      emergencySequenceRunning = false;
+
+      startSpeechRecognition();
+    }
+
+
+    /* =========================================================
+       DELAY HELPER
+    ========================================================== */
+
+    function delay(milliseconds) {
+      return new Promise(
+        (resolve) =>
+          setTimeout(
+            resolve,
+            milliseconds
+          )
+      );
+    }
+
+
+    /* =========================================================
+       AUDIO CONTEXT AUTO-SENSOR
+    ========================================================== */
+
+    async function enableAutoSensor() {
+      /*
+       * AudioContext / microphone access normally requires
+       * a user gesture. This function is therefore called
+       * directly by the "Enable Auto-Sensor" button.
+       */
+
+      if (sensorEnabled) {
+        disableAutoSensor();
+        return;
+      }
+
+
+      /*
+       * Check browser support.
+       */
+      const AudioContextClass =
+        window.AudioContext ||
+        window.webkitAudioContext;
+
+
+      if (!AudioContextClass) {
+        setSensorError(
+          "This browser does not support AudioContext."
+        );
+
+        return;
+      }
+
+
+      if (!navigator.mediaDevices ||
+          !navigator.mediaDevices.getUserMedia) {
+
+        setSensorError(
+          "Microphone access is not supported by this browser."
+        );
+
+        return;
+      }
+
+
+      try {
+
+        /*
+         * Request microphone permission.
+         */
+        microphoneStream =
+          await navigator.mediaDevices.getUserMedia({
+            audio: {
+              echoCancellation: false,
+              noiseSuppression: false,
+              autoGainControl: false
+            }
+          });
+
+
+        /*
+         * Create AudioContext.
+         */
+        audioContext =
+          new AudioContextClass();
+
+
+        /*
+         * Some browsers create AudioContext in suspended
+         * state, so explicitly resume it.
+         */
+        if (
+          audioContext.state ===
+          "suspended"
+        ) {
+          await audioContext.resume();
+        }
+
+
+        /*
+         * Create the microphone source.
+         */
+        microphoneSource =
+          audioContext.createMediaStreamSource(
+            microphoneStream
+          );
+
+
+        /*
+         * Create AnalyserNode.
+         */
+        analyser =
+          audioContext.createAnalyser();
+
+
+        /*
+         * FFT size controls the amount of frequency data.
+         */
+        analyser.fftSize = 2048;
+
+        /*
+         * Smooth the displayed volume somewhat.
+         */
+        analyser.smoothingTimeConstant = 0.65;
+
+
+        /*
+         * Connect microphone -> analyser.
+         *
+         * We intentionally do NOT connect the analyser back
+         * to the destination, preventing microphone feedback.
+         */
+        microphoneSource.connect(
+          analyser
+        );
+
+
+        sensorEnabled = true;
+        sensorTriggered = false;
+        loudSoundStartTime = null;
+
+
+        /*
+         * Update UI.
+         */
+        sensorButton.textContent =
+          "⏹ Disable Auto-Sensor";
+
+        sensorButton.className =
+          "w-full rounded-2xl border-2 border-red-200 bg-white px-5 py-4 text-sm font-black text-red-700 shadow-sm transition active:scale-95 hover:bg-red-50";
+
+
+        sensorStatusDot.className =
+          "sensor-pulse h-3 w-3 rounded-full bg-green-500";
+
+
+        sensorStatusTitle.textContent =
+          "Auto-Sensor Active";
+
+
+        sensorStatusTitle.className =
+          "text-sm font-black text-green-700";
+
+
+        sensorStatusText.textContent =
+          "Monitoring ambient sound for sustained high-volume alarms.";
+
+
+        volumeContainer.classList.remove(
+          "hidden"
+        );
+
+
+        /*
+         * Start the analyser loop.
+         */
+        monitorAudio();
+
+
+      } catch (error) {
+
+        console.error(
+          "Microphone setup failed:",
+          error
+        );
+
+        setSensorError(
+          getMicrophoneErrorMessage(error)
+        );
+      }
+    }
+
+
+    /* =========================================================
+       MICROPHONE ERROR UI
+    ========================================================== */
+
+    function getMicrophoneErrorMessage(
+      error
+    ) {
+      if (
+        error &&
+        error.name ===
+          "NotAllowedError"
+      ) {
+        return "Microphone permission was denied. Allow microphone access and try again.";
+      }
+
+      if (
+        error &&
+        error.name ===
+          "NotFoundError"
+      ) {
+        return "No microphone was found on this device.";
+      }
+
+      if (
+        error &&
+        error.name ===
+          "NotReadableError"
+      ) {
+        return "The microphone is already being used by another application.";
+      }
+
+      return "Unable to access the microphone. Please check browser permissions.";
+    }
+
+
+    function setSensorError(
+      message
+    ) {
+      sensorStatusDot.className =
+        "h-3 w-3 rounded-full bg-red-500";
+
+      sensorStatusTitle.textContent =
+        "Auto-Sensor Error";
+
+      sensorStatusTitle.className =
+        "text-sm font-black text-red-700";
+
+      sensorStatusText.textContent =
+        message;
+
+      sensorButton.textContent =
+        "🎙️ Enable Auto-Sensor";
+    }
+
+
+    /* =========================================================
+       AUDIO MONITORING
+    ========================================================== */
+
+    function monitorAudio() {
+      if (
+        !sensorEnabled ||
+        !analyser
+      ) {
+        return;
+      }
+
+
+      const bufferLength =
+        analyser.fftSize;
+
+      const dataArray =
+        new Uint8Array(
+          bufferLength
+        );
+
+
+      function analyse() {
+
+        if (
+          !sensorEnabled ||
+          !analyser
+        ) {
+          return;
+        }
+
+
+        /*
+         * Get time-domain waveform.
+         */
+        analyser.getByteTimeDomainData(
+          dataArray
+        );
+
+
+        /*
+         * Calculate RMS amplitude.
+         *
+         * Raw values are approximately 0–255,
+         * with 128 representing silence/center.
+         */
+        let sumSquares = 0;
+
+        for (
+          let i = 0;
+          i < dataArray.length;
+          i++
+        ) {
+          const normalized =
+            (dataArray[i] - 128) /
+            128;
+
+          sumSquares +=
+            normalized *
+            normalized;
+        }
+
+
+        const rms =
+          Math.sqrt(
+            sumSquares /
+              dataArray.length
+          );
+
+
+        /*
+         * Convert to percentage for UI.
+         */
+        const displayPercent =
+          Math.min(
+            100,
+            Math.round(
+              rms * 100
+            )
+          );
+
+
+        volumeBar.style.width =
+          `${displayPercent}%`;
+
+        volumePercent.textContent =
+          `${displayPercent}%`;
+
+
+        /*
+         * Change meter color according to volume.
+         */
+        if (
+          rms >=
+          LOUD_VOLUME_THRESHOLD
+        ) {
+          volumeBar.className =
+            "volume-bar h-full rounded-full bg-red-500";
+
+          alarmDetectionText.textContent =
+            "⚠️ High sound detected — checking duration...";
+
+          alarmDetectionText.className =
+            "mt-2 text-center text-[11px] font-black text-red-600";
+
+        } else {
+
+          volumeBar.className =
+            "volume-bar h-full rounded-full bg-green-500";
+
+          alarmDetectionText.textContent =
+            "Monitoring for sustained loud sound...";
+
+          alarmDetectionText.className =
+            "mt-2 text-center text-[11px] font-semibold text-slate-400";
+        }
+
+
+        /* -----------------------------------------------------
+           SUSTAINED HIGH-VOLUME DETECTION
+        ------------------------------------------------------ */
+
+        if (
+          rms >=
+          LOUD_VOLUME_THRESHOLD
+        ) {
+
+          /*
+           * Start timing when volume first becomes loud.
+           */
+          if (
+            loudSoundStartTime === null
+          ) {
+            loudSoundStartTime =
+              performance.now();
+          }
+
+
+          const loudDuration =
+            performance.now() -
+            loudSoundStartTime;
+
+
+          /*
+           * Trigger after approximately 1.3 seconds.
+           */
+          if (
+            loudDuration >=
+              REQUIRED_LOUD_DURATION &&
+            !sensorTriggered
+          ) {
+
+            sensorTriggered = true;
+
+            /*
+             * Stop monitoring before triggering emergency.
+             */
+            stopAudioMonitoring();
+
+            /*
+             * Automatically trigger Screen 2.
+             * NO further click is required.
+             */
+            startEmergencySequence(
+              "auto"
+            );
+
+            return;
+          }
+
+        } else {
+
+          /*
+           * Sound dropped below threshold, so reset the
+           * sustained-duration timer.
+           */
+          loudSoundStartTime =
+            null;
+        }
+
+
+        sensorAnimationFrame =
+          requestAnimationFrame(
+            analyse
+          );
+      }
+
+
+      analyse();
+    }
+
+
+    /* =========================================================
+       STOP AUDIO MONITORING
+    ========================================================== */
+
+    function stopAudioMonitoring() {
+      if (
+        sensorAnimationFrame !==
+        null
+      ) {
+        cancelAnimationFrame(
+          sensorAnimationFrame
+        );
+
+        sensorAnimationFrame =
+          null;
+      }
+
+
+      if (microphoneSource) {
+        try {
+          microphoneSource.disconnect();
+        } catch (error) {
+          console.warn(error);
+        }
+
+        microphoneSource = null;
+      }
+
+
+      if (analyser) {
+        try {
+          analyser.disconnect();
+        } catch (error) {
+          console.warn(error);
+        }
+
+        analyser = null;
+      }
+
+
+      if (microphoneStream) {
+        microphoneStream
+          .getTracks()
+          .forEach(
+            (track) =>
+              track.stop()
+          );
+
+        microphoneStream = null;
+      }
+
+
+      if (audioContext) {
+        try {
+          audioContext.close();
+        } catch (error) {
+          console.warn(error);
+        }
+
+        audioContext = null;
+      }
+
+
+      sensorEnabled = false;
+      loudSoundStartTime = null;
+
+
+      volumeContainer.classList.add(
+        "hidden"
+      );
+    }
+
+
+    function disableAutoSensor() {
+      stopAudioMonitoring();
+
+      sensorTriggered = false;
+
+      sensorButton.textContent =
+        "🎙️ Enable Auto-Sensor";
+
+      sensorButton.className =
+        "w-full rounded-2xl border-2 border-green-200 bg-white px-5 py-4 text-sm font-black text-green-700 shadow-sm transition active:scale-95 hover:bg-green-50";
+
+
+      sensorStatusDot.className =
+        "h-3 w-3 rounded-full bg-slate-300";
+
+
+      sensorStatusTitle.textContent =
+        "Auto-Sensor Disabled";
+
+      sensorStatusTitle.className =
+        "text-sm font-black text-slate-700";
+
+
+      sensorStatusText.textContent =
+        "Tap the button to allow microphone access and monitor ambient sound.";
+    }
+
+
+    /* =========================================================
+       SPEECH RECOGNITION
+    ========================================================== */
+
+    const SpeechRecognition =
+      window.SpeechRecognition ||
+      window.webkitSpeechRecognition ||
+      null;
+
+
+    function createRecognition() {
+      if (!SpeechRecognition) {
+        return null;
+      }
+
+
+      const recognizer =
+        new SpeechRecognition();
+
+
+      /*
+       * One response is enough for this emergency question.
+       */
+      recognizer.continuous = false;
+
+      recognizer.interimResults = true;
+
+      /*
+       * en-IN handles Romanized Hindi + English reasonably
+       * well in supported browsers.
+       */
+      recognizer.lang = "en-IN";
+
+      recognizer.maxAlternatives = 3;
+
+
+      recognizer.onstart = () => {
+        recognitionActive = true;
+
+        showListeningPanel();
+
+        sequenceStatus.textContent =
+          "Listening for your response...";
+      };
+
+
+      recognizer.onresult = (
+        event
+      ) => {
+
+        let finalText = "";
+        let interimText = "";
+
+
+        for (
+          let i = event.resultIndex;
+          i < event.results.length;
+          i++
+        ) {
+
+          const result =
+            event.results[i];
+
+
+          if (
+            result.isFinal
+          ) {
+            finalText +=
+              result[0].transcript +
+              " ";
+
+          } else {
+            interimText +=
+              result[0].transcript +
+              " ";
+          }
+        }
+
+
+        const displayText =
+          (
+            finalText ||
+            interimText
+          ).trim();
+
+
+        transcriptElement.textContent =
+          displayText ||
+          "Listening for your response...";
+
+
+        /*
+         * Process only the final transcript.
+         */
+        if (
+          finalText.trim()
+        ) {
+          processTranscript(
+            finalText.trim()
+          );
+        }
+      };
+
+
+      recognizer.onerror = (
+        event
+      ) => {
+
+        console.warn(
+          "Speech recognition error:",
+          event.error
+        );
+
+        recognitionActive = false;
+
+        hideListeningPanel();
+
+        sequenceStatus.textContent =
+          "Could not understand the response. Please follow the safety instructions.";
+
+        /*
+         * Do not invent a smart reply when there was no
+         * recognized response.
+         */
+        if (
+          event.error ===
+            "not-allowed" ||
+          event.error ===
+            "service-not-allowed"
+        ) {
+          smartResponse.textContent =
+            "Microphone permission is required for interactive voice responses. Follow the nearest emergency exit signs.";
+        } else {
+          smartResponse.textContent =
+            "Please stay calm and follow the nearest emergency exit signs.";
+        }
+
+        responsePanel.classList.remove(
+          "hidden"
+        );
+
+        listenAgainButton.classList.remove(
+          "hidden"
+        );
+      };
+
+
+      recognizer.onend = () => {
+        recognitionActive = false;
+
+        /*
+         * Keep the response panel visible if a final result
+         * is already being processed.
+         */
+        if (
+          !responseBeingProcessed
+        ) {
+          hideListeningPanel();
+        }
+      };
+
+
+      return recognizer;
+    }
+
+
+    function startSpeechRecognition() {
+
+      /*
+       * Browser fallback.
+       */
+      if (!SpeechRecognition) {
+
+        sequenceStatus.textContent =
+          "Speech recognition is not supported in this browser.";
+
+        smartResponse.textContent =
+          "Please stay calm and follow the nearest emergency exit signs.";
+
+        responsePanel.classList.remove(
+          "hidden"
+        );
+
+        return;
+      }
+
+
+      stopRecognition();
+
+
+      recognition =
+        createRecognition();
+
+
+      if (!recognition) {
+        return;
+      }
+
+
+      try {
+
+        recognition.start();
+
+      } catch (error) {
+
+        console.warn(
+          "Recognition start failed:",
+          error
+        );
+
+        sequenceStatus.textContent =
+          "Unable to start the microphone.";
+
+        hideListeningPanel();
+      }
+    }
+
+
+    function stopRecognition() {
+
+      if (
+        recognition
+      ) {
+
+        try {
+          recognition.stop();
+        } catch (error) {
+          console.warn(error);
+        }
+
+      }
+
+      recognition = null;
+
+      recognitionActive = false;
+
+      hideListeningPanel();
+    }
+
+
+    /* =========================================================
+       LISTENING UI
+    ========================================================== */
+
+    function showListeningPanel() {
+
+      listeningPanel.classList.remove(
+        "hidden"
+      );
+
+      responsePanel.classList.add(
+        "hidden"
+      );
+
+      listenAgainButton.classList.add(
+        "hidden"
+      );
+
+      transcriptElement.textContent =
+        "Listening for your response...";
+    }
+
+
+    function hideListeningPanel() {
+      listeningPanel.classList.add(
+        "hidden"
+      );
+    }
+
+
+    /* =========================================================
+       KEYWORD MATCHING
+    ========================================================== */
+
+    function normalizeText(text) {
+
+      return text
+        .toLowerCase()
+        .normalize("NFD")
+        .replace(
+          /[\u0300-\u036f]/g,
+          ""
+        )
+        .replace(
+          /[.,!?;:'"()]/g,
+          " "
+        )
+        .replace(
+          /\s+/g,
+          " "
+        )
+        .trim();
+    }
+
+
+    function containsKeyword(
+      text,
+      keywords
+    ) {
+      return keywords.some(
+        (keyword) =>
+          text.includes(keyword)
+      );
+    }
+
+
+    async function processTranscript(
+      originalTranscript
+    ) {
+
+      if (
+        responseBeingProcessed
+      ) {
+        return;
+      }
+
+      responseBeingProcessed = true;
+
+      stopRecognition();
+
+
+      const text =
+        normalizeText(
+          originalTranscript
+        );
+
+
+      /*
+       * Required smoke keywords.
+       */
+      const smokeKeywords = [
+        "dhua",
+        "dhuan",
+        "dhooa",
+        "dhuaa",
+        "smoke",
+        "धुआ",
+        "धुआं"
+      ];
+
+
+      /*
+       * Required fire keywords.
+       */
+      const fireKeywords = [
+        "aag",
+        "fire",
+        "jal",
+        " आग",
+        "आग"
+      ];
+
+
+      let reply = null;
+
+
+      /*
+       * Check smoke first.
+       */
+      if (
+        containsKeyword(
+          text,
+          smokeKeywords
+        )
+      ) {
+
+        reply = SMOKE_REPLY;
+
+      } else if (
+        containsKeyword(
+          text,
+          fireKeywords
+        )
+      ) {
+
+        reply = FIRE_REPLY;
+      }
+
+
+      /*
+       * If neither keyword is recognized, provide a safe
+       * generic instruction without pretending that smoke/fire
+       * was detected.
+       */
+      if (!reply) {
+
+        reply =
+          "Stay calm. Follow the standard exit signs and evacuate the building immediately.";
+      }
+
+
+      /* -------------------------------------------------------
+         DISPLAY SMART RESPONSE
+      -------------------------------------------------------- */
+
+      smartResponse.textContent =
+        reply;
+
+      responsePanel.classList.remove(
+        "hidden"
+      );
+
+      listenAgainButton.classList.remove(
+        "hidden"
+      );
+
+
+      sequenceStatus.textContent =
+        "Smart emergency guidance generated.";
+
+
+      /* -------------------------------------------------------
+         SPEAK SMART RESPONSE
+      -------------------------------------------------------- */
+
+      if (speechSupported) {
+
+        await speak(
+          reply,
+          "en-IN",
+          0.75
+        );
+      }
+
+
+      responseBeingProcessed = false;
+    }
+
+
+    /* =========================================================
+       MANUAL EMERGENCY BUTTON
+    ========================================================== */
+
+    emergencyButton.addEventListener(
+      "click",
+      () => {
+
+        /*
+         * Manual trigger does not require the sensor.
+         */
+        startEmergencySequence(
+          "manual"
+        );
+      }
+    );
+
+
+    /* =========================================================
+       ENABLE/DISABLE AUTO SENSOR
+    ========================================================== */
+
+    sensorButton.addEventListener(
+      "click",
+      () => {
+
+        if (sensorEnabled) {
+          disableAutoSensor();
+        } else {
+          enableAutoSensor();
+        }
+
+      }
+    );
+
+
+    /* =========================================================
+       REPLAY EMERGENCY VOICE
+    ========================================================== */
+
+    replayButton.addEventListener(
+      "click",
+      async () => {
+
+        stopRecognition();
+        stopSpeech();
+
+        responsePanel.classList.add(
+          "hidden"
+        );
+
+        listenAgainButton.classList.add(
+          "hidden"
+        );
+
+        sequenceStatus.textContent =
+          "Replaying emergency alarm...";
+
+
+        /*
+         * EXACTLY TWO alarm utterances again.
+         */
+        await speak(
+          ALARM_TEXT,
+          "en-IN",
+          0.75
+        );
+
+        await speak(
+          ALARM_TEXT,
+          "en-IN",
+          0.75
+        );
+
+
+        /*
+         * Then the required question.
+         */
+        await speak(
+          QUESTION_TEXT,
+          "en-IN",
+          0.75
+        );
+
+
+        /*
+         * Then automatically listen.
+         */
+        startSpeechRecognition();
+      }
+    );
+
+
+    /* =========================================================
+       LISTEN AGAIN
+    ========================================================== */
+
+    listenAgainButton.addEventListener(
+      "click",
+      () => {
+
+        responsePanel.classList.add(
+          "hidden"
+        );
+
+        startSpeechRecognition();
+      }
+    );
+
+
+    /* =========================================================
+       STOP / RETURN HOME
+    ========================================================== */
+
+    stopEmergencyButton.addEventListener(
+      "click",
+      () => {
+
+        stopSpeech();
+
+        stopRecognition();
+
+        /*
+         * Also release microphone resources if the sensor
+         * was active.
+         */
+        if (sensorEnabled) {
+          stopAudioMonitoring();
+        }
+
+        emergencySequenceRunning =
+          false;
+
+        sensorTriggered = false;
+
+        responseBeingProcessed =
+          false;
+
+        showHomeScreen();
+
+        /*
+         * Reset sensor UI to allow the user to enable it again.
+         */
+        sensorButton.textContent =
+          "🎙️ Enable Auto-Sensor";
+
+        sensorButton.className =
+          "w-full rounded-2xl border-2 border-green-200 bg-white px-5 py-4 text-sm font-black text-green-700 shadow-sm transition active:scale-95 hover:bg-green-50";
+
+        sensorStatusDot.className =
+          "h-3 w-3 rounded-full bg-slate-300";
+
+        sensorStatusTitle.textContent =
+          "Auto-Sensor Disabled";
+
+        sensorStatusTitle.className =
+          "text-sm font-black text-slate-700";
+
+        sensorStatusText.textContent =
+          "Tap the button to allow microphone access and monitor ambient sound.";
+      }
+    );
+
+
+    /* =========================================================
+       BROWSER SPEECH VOICE INITIALIZATION
+    ========================================================== */
+
+    if (speechSupported) {
+
+      /*
+       * Mobile browsers can populate available voices
+       * asynchronously.
+       */
+      window.speechSynthesis.getVoices();
+
+      window.speechSynthesis.onvoiceschanged =
+        () => {
+          window.speechSynthesis.getVoices();
+        };
+    }
+
+
+    /* =========================================================
+       PAGE VISIBILITY SAFETY
+    ========================================================== */
+
+    document.addEventListener(
+      "visibilitychange",
+      () => {
+
+        /*
+         * Browsers can suspend AudioContext when the page
+         * becomes hidden. We do not trigger emergency based
+         * on stale analyser data.
+         */
+        if (
+          document.hidden &&
+          audioContext
+        ) {
+          loudSoundStartTime =
+            null;
+        }
+      }
+    );
+
+  </script>
+</body>
+</html>
+```
